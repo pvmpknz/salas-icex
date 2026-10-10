@@ -44,7 +44,7 @@ h1 { margin: 0; font-weight: 700; font-size: clamp(1.9rem, 6vw, 3rem); line-heig
 .clock { display: flex; flex-direction: column; align-items: flex-end; }
 .clock span { font-family: var(--f-mono); font-weight: 600; font-size: clamp(2rem, 8vw, 3.4rem); line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .clock small { color: var(--ink2); margin-top: 6px; }
-@media (max-width: 520px) { .clock { align-items: flex-start; } }
+@media (max-width: 520px) { .sub { display: none; } .mast { align-items: flex-start; flex-wrap: nowrap; } .clock small { font-size: 12px; } }
 
 .lede { margin: 0; font-size: clamp(1.15rem, 3.2vw, 1.5rem); line-height: 1.3; letter-spacing: -.01em; }
 .lede b { font-weight: 700; color: var(--free); font-variant-numeric: tabular-nums; }
@@ -55,7 +55,7 @@ h1 { margin: 0; font-weight: 700; font-size: clamp(1.9rem, 6vw, 3rem); line-heig
 
 /* controles */
 .ctl { display: flex; flex-direction: column; gap: 14px; }
-.days { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+.days { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-top: 4px; }
 .days button { background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1px; padding: 8px 12px; min-height: 40px; cursor: pointer; color: var(--ink2); font-weight: 500; flex: none; }
 .days button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 700; }
 .days button.today::after { content: "•"; margin-left: 4px; color: var(--now); }
@@ -78,9 +78,15 @@ input[type="search"] { width: min(100%, 280px); }
 
 /* folha de salas */
 #rooms { display: flex; flex-direction: column; gap: 30px; }
-.cols { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 14rem; column-gap: 18px; align-items: center; }
+.cols { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 16rem; column-gap: 18px; align-items: center; }
 .ghead { padding-bottom: 6px; align-items: end; }
 .ghead h2 { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+.gtoggle { background: none; border: 0; padding: 6px 0; font: inherit; font-weight: 700; letter-spacing: -.01em; cursor: pointer; text-align: left; display: inline-flex; align-items: center; }
+.gtoggle::before { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin-right: 10px; position: relative; top: -2px; flex: none; }
+.gtoggle[aria-expanded="false"]::before { transform: rotate(-45deg); top: 0; }
+.grp.col .axis { visibility: hidden; }
+.grp.col .ghead { padding-bottom: 0; }
+ul.list[hidden] { display: none; }
 .gcnt { color: var(--ink2); font-size: 13px; font-variant-numeric: tabular-nums; }
 .axis { position: relative; height: 16px; }
 .axis span { position: absolute; top: 0; transform: translateX(-50%); font-family: var(--f-mono); font-size: 11px; color: var(--ink2); font-variant-numeric: tabular-nums; }
@@ -109,7 +115,7 @@ ul.list { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--i
 .rstat b::before { content: ""; flex: none; width: 10px; height: 10px; background: var(--ink); }
 .free .rstat b::before { background: var(--free); }
 .soon .rstat b::before { background: var(--soon); }
-.rstat em { font-style: normal; color: var(--ink2); font-size: 13px; overflow-wrap: anywhere; }
+.rstat em { font-style: normal; color: var(--ink2); font-size: 13px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rdetail { padding: 2px 0 14px; display: grid; grid-template-columns: 9rem minmax(0, 1fr); column-gap: 18px; }
 .rdetail > div { grid-column: 2; }
 .rdetail h3 { margin: 4px 0 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink2); }
@@ -122,6 +128,13 @@ ul.list { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--i
 
 @media (max-width: 760px) {
   .days button { padding-inline: 9px; }
+  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .f-search, .f-show, .reset { grid-column: 1 / -1; }
+  .field input, .field select { width: 100%; }
+  input[type="search"] { width: 100%; }
+  .opts { display: flex; }
+  .opts button { flex: 1; }
+  .legend { font-size: 12px; gap: 4px 14px; }
   .cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); row-gap: 6px; }
   .ghead { grid-template-areas: "h c" "a a"; }
   .ghead h2 { grid-area: h; } .gcnt { grid-area: c; text-align: right; } .axis { grid-area: a; }
@@ -159,25 +172,26 @@ details.more .inner { margin-top: 12px; }
   <p class="lede" id="lede" role="status" aria-live="polite"></p>
   <p class="note" id="closed" hidden></p>
 
+  <div class="days" id="days" role="group" aria-label="Dia da semana"></div>
+
   <div class="ctl">
-    <div class="days" id="days" role="group" aria-label="Dia da semana"></div>
     <div class="filters">
-      <label class="field"><span>Buscar</span>
+      <label class="field f-search"><span>Buscar</span>
         <input type="search" id="q" placeholder="sala, código ou disciplina" autocomplete="off"></label>
-      <div class="field"><span>Mostrar</span>
+      <div class="field f-show"><span>Mostrar</span>
         <div class="opts" id="optStatus" role="group" aria-label="Filtrar por situação">
           <button type="button" data-v="all" aria-pressed="true">Todas</button>
           <button type="button" data-v="free" aria-pressed="false">Livres</button>
           <button type="button" data-v="busy" aria-pressed="false">Ocupadas</button>
         </div></div>
-      <label class="field"><span>Prédio</span>
+      <label class="field f-bld"><span>Prédio</span>
         <select id="bld">
           <option value="all">Todos</option>
           <option value="ICEx">ICEx</option>
           <option value="CAD3">CAD3</option>
           <option value="Outros">CAD1, CAD2 e Engenharia</option>
         </select></label>
-      <label class="field"><span>Hora</span><input type="time" id="time"></label>
+      <label class="field f-time"><span>Hora</span><input type="time" id="time"></label>
       <button type="button" class="reset" id="reset" hidden>Voltar para agora</button>
     </div>
     <p class="legend" aria-hidden="true"><span><i></i>aula</span><span><i class="on"></i>aula em andamento</span><span><i class="ln"></i>hora consultada</span></p>
@@ -235,13 +249,12 @@ function brNow() {
   return {dow: WD[p.weekday], h, m: +p.minute, s: +p.second, min: h * 60 + (+p.minute), date: p.day + '/' + p.month + '/' + p.year};
 }
 
-const state = {day: null, time: null, status: 'all', bld: 'all', q: '', open: new Set()};
+const state = {day: null, time: null, status: 'all', bld: 'all', q: '', open: new Set(), collapsed: new Set()};
 try {
   const saved = JSON.parse(localStorage.getItem('salas-icex') || '{}');
-  if (['all','free','busy'].includes(saved.status)) state.status = saved.status;
   if (['all','ICEx','CAD3','Outros'].includes(saved.bld)) state.bld = saved.bld;
 } catch (e) {}
-function save() { try { localStorage.setItem('salas-icex', JSON.stringify({status: state.status, bld: state.bld})); } catch (e) {} }
+function save() { try { localStorage.setItem('salas-icex', JSON.stringify({bld: state.bld})); } catch (e) {} }
 
 const ORDER = GROUP_ORDER.concat([...new Set(DATA.rooms.map(r => r.g))].filter(g => !GROUP_ORDER.includes(g)));
 const rooms = DATA.rooms.slice().sort((a, b) => {
@@ -282,7 +295,7 @@ function rowHTML(room, st, t) {
   }
   const blocks = st.today.map(c => {
     const on = c.s <= t.min && t.min < c.e;
-    return '<i class="blk' + (on ? ' on' : '') + '" style="left:' + pct(c.s).toFixed(2) + '%;width:' + ((c.e - c.s) / SPAN * 100).toFixed(2) + '%"></i>';
+    return '<i class="blk' + (on ? ' on' : '') + '" title="' + esc(hhmm(c.s) + '–' + hhmm(c.e) + ' ' + titleCase(c.m)) + '" style="left:' + pct(c.s).toFixed(2) + '%;width:' + ((c.e - c.s) / SPAN * 100).toFixed(2) + '%"></i>';
   }).join('');
   const p = pct(t.min);
   const nowl = p >= 0 && p <= 100 ? '<b class="nowl" style="left:' + p.toFixed(2) + '%"></b>' : '';
@@ -295,11 +308,21 @@ function rowHTML(room, st, t) {
   return '<li class="row ' + cls + '" data-id="' + esc(room.id) + '"><button type="button" class="rowbtn cols" aria-expanded="' + isOpen + '" aria-controls="' + did + '">' +
     '<span class="rname">' + esc(main) + (label ? '<small>' + esc(label) + '</small>' : '') + '</span>' +
     '<span class="bar" aria-hidden="true">' + blocks + nowl + '</span>' +
-    '<span class="rstat"><b>' + esc(l1) + '</b>' + (l2 ? '<em>' + esc(l2) + '</em>' : '') + '</span></button>' +
+    '<span class="rstat"><b>' + esc(l1) + '</b>' + (l2 ? '<em title="' + esc(l2) + '">' + esc(l2) + '</em>' : '') + '</span></button>' +
     '<div class="rdetail" id="' + did + '"' + (isOpen ? '' : ' hidden') + '><div><h3>' + DN[t.dow] + '</h3>' +
     (items ? '<ol>' + items + '</ol>' : '<p class="rstat"><em>Nenhuma aula nesta sala neste dia.</em></p>') + '</div></div></li>';
 }
 
+function buildDays() {
+  $('days').innerHTML = DAY_ORDER.map(d => '<button type="button" data-d="' + d + '" aria-pressed="false">' + DSHORT[d] + '</button>').join('');
+}
+function updateDays(t) {
+  $('days').querySelectorAll('button').forEach(b => {
+    const d = +b.dataset.d;
+    b.setAttribute('aria-pressed', String(d === t.dow));
+    b.classList.toggle('today', d === t.today);
+  });
+}
 const AXIS = [8,10,12,14,16,18,20,22].map(h => '<span style="left:' + ((h - 7) / 16 * 100) + '%">' + pad(h) + '</span>').join('');
 
 function render() {
@@ -334,10 +357,11 @@ function render() {
     const list = groups.get(g);
     if (!list) continue;
     const gf = list.filter(x => !x.st.busy).length;
-    html += '<section><div class="cols ghead"><h2>' + esc(g) + '</h2><div class="axis" aria-hidden="true">' + AXIS + '</div><span class="gcnt">' + gf + ' de ' + list.length + ' livres</span></div>' +
-      '<ul class="list">' + list.map(x => rowHTML(x.r, x.st, t)).join('') + '</ul></section>';
+    const col = !q && state.collapsed.has(g);
+    html += '<section class="grp' + (col ? ' col' : '') + '"><div class="cols ghead"><h2><button type="button" class="gtoggle" data-g="' + esc(g) + '" aria-expanded="' + (!col) + '">' + esc(g) + '</button></h2><div class="axis" aria-hidden="true">' + AXIS + '</div><span class="gcnt">' + gf + ' de ' + list.length + ' livres</span></div>' +
+      '<ul class="list"' + (col ? ' hidden' : '') + '>' + list.map(x => rowHTML(x.r, x.st, t)).join('') + '</ul></section>';
   }
-  $('rooms').innerHTML = html || '<div class="empty">Nenhuma sala encontrada com esses filtros.</div>';
+  $('rooms').innerHTML = html || '<div class="empty">Nenhuma sala encontrada' + (state.status === 'busy' ? ' ocupada' : state.status === 'free' ? ' livre' : '') + ' nesse dia e horário com esses filtros. Tente outro dia, outra hora ou limpe a busca.</div>';
   if (fid && fid.id) {
     const el = $('rooms').querySelector('.row[data-id="' + CSS.escape(fid.id) + '"] .rowbtn');
     if (el) el.focus({preventScroll: true});
@@ -349,7 +373,7 @@ function render() {
     ? onl.map(c => '<li>' + esc(titleCase(c.m)) + ' · ' + esc(c.c) + ' ' + esc(c.t) + ' (' + hhmm(c.s) + ' – ' + hhmm(c.e) + ')</li>').join('')
     : '<li>Nenhuma turma online neste horário.</li>';
 
-  $('days').innerHTML = DAY_ORDER.map(d => '<button type="button" data-d="' + d + '" aria-pressed="' + (d === t.dow) + '" class="' + (d === t.today ? 'today' : '') + '">' + DSHORT[d] + '</button>').join('');
+  updateDays(t);
   $('reset').hidden = t.live;
 }
 
@@ -357,13 +381,23 @@ let lastKey = '';
 function tick() {
   const n = brNow();
   $('clock').textContent = pad(n.h) + ':' + pad(n.m) + ':' + pad(n.s);
-  $('date').textContent = DN[n.dow] + ', ' + n.date + ' · Brasília (UTC−3)';
+  $('date').textContent = DSHORT[n.dow] + ', ' + n.date.slice(0, 5) + ' · Brasília';
   if (state.time == null && document.activeElement !== $('time')) $('time').value = hhmm(n.min);
   const key = n.dow + ':' + n.min;
   if (key !== lastKey) { lastKey = key; if (state.time == null || state.day == null) render(); }
 }
 
 $('rooms').addEventListener('click', e => {
+  const gt = e.target.closest('.gtoggle');
+  if (gt) {
+    const g = gt.dataset.g, sec = gt.closest('section');
+    const col = !state.collapsed.has(g);
+    col ? state.collapsed.add(g) : state.collapsed.delete(g);
+    gt.setAttribute('aria-expanded', String(!col));
+    sec.querySelector('.list').hidden = col;
+    sec.classList.toggle('col', col);
+    return;
+  }
   const btn = e.target.closest('.rowbtn');
   if (!btn) return;
   const li = btn.closest('.row'), id = li.dataset.id, d = li.querySelector('.rdetail');
@@ -395,6 +429,7 @@ $('reset').addEventListener('click', () => { state.day = null; state.time = null
 
 $('optStatus').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.v === state.status)));
 $('bld').value = state.bld;
+buildDays();
 tick();
 render();
 setInterval(tick, 1000);

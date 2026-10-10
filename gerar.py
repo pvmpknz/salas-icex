@@ -21,26 +21,95 @@ def minutos(hhmm):
     return int(h) * 60 + int(m)
 
 
+def linha_valida(r):
+    """Recebe as 7 colunas de uma linha e devolve o dict da aula, ou None se não for uma aula."""
+    mat, cod, tur, ini, fim, dias, sala = [re.sub(r'\s+', ' ', (c or '').replace('\n', ' ')).strip() for c in r[:7]]
+    if not (re.fullmatch(r'\d\d:\d\d', ini) and re.fullmatch(r'\d\d:\d\d', fim)):
+        return None
+    ds = [d.replace('Sab', 'Sáb') for d in re.split(r'[\s\-]+', dias) if d]
+    if not ds or any(d not in DIAS for d in ds):
+        return None
+    return dict(m=mat, c=cod, t=tur, i=ini, f=fim, d=ds, s=sala)
+
+
+def palavras_soltas(p, tabela):
+    """Palavras que ficaram fora das células da tabela. Acontece quando uma aula é cortada
+    pela quebra de página: um pedaço fica no fim de uma página e o resto no começo da outra."""
+    xs0 = sorted({round(c[0]) for c in tabela.cells})
+    cel = [c for c in tabela.cells if len(xs0) < 6 or c[0] < xs0[5]]
+    soltas = []
+    for w in p.extract_words():
+        cx, cy = (w['x0'] + w['x1']) / 2, (w['top'] + w['bottom']) / 2
+        if not any(c[0] <= cx <= c[2] and c[1] <= cy <= c[3] for c in cel):
+            soltas.append(w)
+    return soltas
+
+
+def montar_celulas(palavras, xs):
+    """Distribui as palavras nas 7 colunas (Matéria ... Sala) pela posição horizontal."""
+    cols = [[] for _ in range(7)]
+    for w in palavras:
+        x = w['x0'] + 1
+        if x < xs[0]:
+            continue
+        i = 6
+        for k in range(6):
+            if xs[k] <= x < xs[k + 1]:
+                i = k
+                break
+        cols[i].append(w)
+    return [' '.join(w['text'] for w in sorted(c, key=lambda w: (round(w['top']), w['x0']))) for c in cols]
+
+
+def juntar(a, b):
+    return [(x + ' ' + y).strip() for x, y in zip(a, b)]
+
+
 def ler_pdf(caminho):
     """Lê a tabela (Matéria, Código, Turma, Início, Fim, Dias, Sala) de todas as páginas."""
     linhas, ignoradas = [], 0
+    pendente = None  # pedaço de aula no fim da página anterior
+
+    def add(cels):
+        r = linha_valida(cels) if cels else None
+        if r:
+            linhas.append(r)
+        return r
+
     with pdfplumber.open(caminho) as pdf:
         for p in pdf.pages:
-            for tabela in p.extract_tables():
-                for r in tabela:
-                    r = [(c or '').replace('\n', ' ').strip() for c in r]
-                    if len(r) < 7 or r[0] == 'Matéria':
-                        continue
-                    mat, cod, tur, ini, fim, dias, sala = r[:7]
-                    if not (re.fullmatch(r'\d\d:\d\d', ini) and re.fullmatch(r'\d\d:\d\d', fim)):
-                        ignoradas += 1
-                        continue
-                    ds = [d.replace('Sab', 'Sáb') for d in re.split(r'[\s\-]+', dias) if d]
-                    if not ds or any(d not in DIAS for d in ds):
-                        ignoradas += 1
-                        continue
-                    linhas.append(dict(m=re.sub(r'\s+', ' ', mat), c=cod, t=tur, i=ini, f=fim,
-                                       d=ds, s=re.sub(r'\s+', ' ', sala)))
+            tabelas = p.find_tables()
+            if not tabelas:
+                pendente = None
+                continue
+            t = max(tabelas, key=lambda t: len(t.cells))
+            xs = sorted({round(c[0]) for c in t.cells} | {round(c[2]) for c in t.cells})
+            soltas = palavras_soltas(p, t)
+            principais = [c for c in t.cells if c[0] < xs[5]]  # só as colunas de verdade (as extras bagunçam)
+            fim_cel = max(c[3] for c in principais)
+            ini_cel = min(c[1] for c in principais)
+            topo = montar_celulas([w for w in soltas if (w['top'] + w['bottom']) / 2 <= ini_cel + 2], xs)
+            fundo = montar_celulas([w for w in soltas if (w['top'] + w['bottom']) / 2 >= fim_cel - 2], xs)
+            tem_topo = any(topo)
+
+            if pendente is not None:
+                if tem_topo and not (linha_valida(pendente) and linha_valida(topo)):
+                    add(juntar(pendente, topo))   # aula cortada ao meio pela quebra de página
+                    tem_topo = False
+                else:
+                    add(pendente)
+                pendente = None
+            if tem_topo:
+                add(topo)
+
+            for r in t.extract():
+                if len(r) < 7 or (r[0] or '').strip() == 'Matéria':
+                    continue
+                if not add(r) and any((c or '').strip() for c in r[:7]):
+                    ignoradas += 1
+            pendente = fundo if any(fundo) else None
+        if pendente is not None:
+            add(pendente)
     return linhas, ignoradas
 
 
