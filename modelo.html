@@ -1,0 +1,401 @@
+<title>Salas do ICEx</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: folha de horários. Cabeçalho com relógio, uma frase de resumo, filtros e uma linha por sala com a barra do dia (07h às 23h): aulas são blocos, os vazios são as janelas livres. */
+:root {
+  --bg: #EDEFEA;
+  --paper: #F7F8F4;
+  --ink: #181C1A;
+  --ink2: #59625D;
+  --line: #CFD4CD;
+  --track: #E0E4DE;
+  --tick: #CBD1C9;
+  --block: #8F9992;
+  --now: #E0481F;
+  --free: #1B7A4B;
+  --soon: #A87400;
+  --f-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --f-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101412; --paper: #171C19; --ink: #E9EDE8; --ink2: #9AA59E; --line: #2C3530; --track: #202723; --tick: #2F3A34;
+    --block: #5E6B63; --now: #FF7A4D; --free: #5FD39B; --soon: #E6B84A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101412; --paper: #171C19; --ink: #E9EDE8; --ink2: #9AA59E; --line: #2C3530; --track: #202723; --tick: #2F3A34;
+  --block: #5E6B63; --now: #FF7A4D; --free: #5FD39B; --soon: #E6B84A;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45; padding-inline: 16px; padding-block: 24px 56px; }
+.wrap { max-width: 1100px; margin-inline: auto; display: flex; flex-direction: column; gap: 22px; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* cabeçalho */
+.mast { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px 32px; flex-wrap: wrap; }
+h1 { margin: 0; font-weight: 700; font-size: clamp(1.9rem, 6vw, 3rem); line-height: 1; letter-spacing: -.03em; }
+.sub { margin: 8px 0 0; color: var(--ink2); max-width: 36ch; }
+.clock { display: flex; flex-direction: column; align-items: flex-end; }
+.clock span { font-family: var(--f-mono); font-weight: 600; font-size: clamp(2rem, 8vw, 3.4rem); line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.clock small { color: var(--ink2); margin-top: 6px; }
+@media (max-width: 520px) { .clock { align-items: flex-start; } }
+
+.lede { margin: 0; font-size: clamp(1.15rem, 3.2vw, 1.5rem); line-height: 1.3; letter-spacing: -.01em; }
+.lede b { font-weight: 700; color: var(--free); font-variant-numeric: tabular-nums; }
+.live { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; font-size: 13px; color: var(--ink2); letter-spacing: 0; white-space: nowrap; }
+.live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--free); }
+.live.sim::before { background: var(--soon); }
+.note { margin: 0; color: var(--ink2); padding-left: 12px; border-left: 3px solid var(--soon); }
+
+/* controles */
+.ctl { display: flex; flex-direction: column; gap: 14px; }
+.days { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+.days button { background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1px; padding: 8px 12px; min-height: 40px; cursor: pointer; color: var(--ink2); font-weight: 500; flex: none; }
+.days button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 700; }
+.days button.today::after { content: "•"; margin-left: 4px; color: var(--now); }
+.filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: end; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field > span { font-size: 12px; color: var(--ink2); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+input[type="search"], input[type="time"], select { background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 7px 10px; min-height: 40px; min-width: 0; }
+input[type="search"] { width: min(100%, 280px); }
+.opts { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; background: var(--paper); }
+.opts button { border: 0; background: transparent; padding: 7px 14px; min-height: 38px; cursor: pointer; color: var(--ink2); font-weight: 500; }
+.opts button + button { border-left: 1px solid var(--line); }
+.opts button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.reset { background: none; border: 1px solid var(--line); border-radius: 3px; min-height: 40px; padding: 7px 14px; cursor: pointer; font-weight: 500; }
+.reset[hidden] { display: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; color: var(--ink2); font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 18px; height: 10px; background: var(--block); }
+.legend i.on { background: var(--ink); }
+.legend i.ln { width: 3px; height: 14px; background: var(--now); }
+
+/* folha de salas */
+#rooms { display: flex; flex-direction: column; gap: 30px; }
+.cols { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 14rem; column-gap: 18px; align-items: center; }
+.ghead { padding-bottom: 6px; align-items: end; }
+.ghead h2 { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+.gcnt { color: var(--ink2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.axis { position: relative; height: 16px; }
+.axis span { position: absolute; top: 0; transform: translateX(-50%); font-family: var(--f-mono); font-size: 11px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+ul.list { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); }
+.row { border-bottom: 1px solid var(--line); }
+.rowbtn { width: 100%; text-align: left; background: transparent; border: 0; padding: 9px 0; cursor: pointer; }
+.rdetail[hidden] { display: none; }
+.rowbtn:hover { background: var(--paper); }
+.rname { font-weight: 700; font-size: 1.2rem; letter-spacing: -.02em; line-height: 1.15; overflow-wrap: anywhere; }
+.rname small { display: block; font-weight: 400; font-size: 12px; letter-spacing: 0; color: var(--ink2); }
+.bar { position: relative; height: 20px; background:
+  linear-gradient(var(--tick), var(--tick)) 6.25% 0 / 1px 100% no-repeat,
+  linear-gradient(var(--tick), var(--tick)) 18.75% 0 / 1px 100% no-repeat,
+  linear-gradient(var(--tick), var(--tick)) 31.25% 0 / 1px 100% no-repeat,
+  linear-gradient(var(--tick), var(--tick)) 43.75% 0 / 1px 100% no-repeat,
+  linear-gradient(var(--tick), var(--tick)) 56.25% 0 / 1px 100% no-repeat,
+  linear-gradient(var(--tick), var(--tick)) 68.75% 0 / 1px 100% no-repeat,
+  linear-gradient(var(--tick), var(--tick)) 81.25% 0 / 1px 100% no-repeat,
+  linear-gradient(var(--tick), var(--tick)) 93.75% 0 / 1px 100% no-repeat,
+  var(--track); }
+.blk { position: absolute; top: 3px; bottom: 3px; background: var(--block); border-radius: 1px; }
+.blk.on { background: var(--ink); top: 1px; bottom: 1px; }
+.nowl { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1px; background: var(--now); }
+.rstat { display: flex; flex-direction: column; min-width: 0; font-size: 14px; }
+.rstat b { font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.rstat b::before { content: ""; flex: none; width: 10px; height: 10px; background: var(--ink); }
+.free .rstat b::before { background: var(--free); }
+.soon .rstat b::before { background: var(--soon); }
+.rstat em { font-style: normal; color: var(--ink2); font-size: 13px; overflow-wrap: anywhere; }
+.rdetail { padding: 2px 0 14px; display: grid; grid-template-columns: 9rem minmax(0, 1fr); column-gap: 18px; }
+.rdetail > div { grid-column: 2; }
+.rdetail h3 { margin: 4px 0 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink2); }
+.rdetail ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.rdetail li { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 2px 12px; font-size: 14px; }
+.rdetail li time { font-family: var(--f-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.rdetail li.now { font-weight: 700; }
+.rdetail li small { display: block; font-weight: 400; color: var(--ink2); font-size: 13px; }
+.empty { padding: 28px 0; color: var(--ink2); border-top: 2px solid var(--ink); }
+
+@media (max-width: 760px) {
+  .days button { padding-inline: 9px; }
+  .cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); row-gap: 6px; }
+  .ghead { grid-template-areas: "h c" "a a"; }
+  .ghead h2 { grid-area: h; } .gcnt { grid-area: c; text-align: right; } .axis { grid-area: a; }
+  .rowbtn { display: grid; grid-template-areas: "n s" "b b"; }
+  .rname { grid-area: n; } .rstat { grid-area: s; } .bar { grid-area: b; }
+  .rdetail { grid-template-columns: minmax(0, 1fr); }
+  .rdetail > div { grid-column: 1; }
+  .rdetail li { grid-template-columns: 6.6rem minmax(0, 1fr); }
+}
+
+/* rodapé */
+details.more { border-top: 1px solid var(--line); padding-top: 10px; }
+details.more summary { cursor: pointer; font-weight: 600; }
+details.more .inner { margin-top: 12px; }
+.maps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.maps figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.maps img { width: 100%; height: auto; background: #fff; border: 1px solid var(--line); }
+.maps figcaption { font-size: 13px; color: var(--ink2); }
+.olist { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 2px; }
+.foot { margin: 0; color: var(--ink2); font-size: 13px; max-width: 68ch; }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <h1>Salas do ICEx</h1>
+      <p class="sub">Quem está em aula e quais salas estão livres, com a grade da semana.</p>
+    </div>
+    <div class="clock">
+      <span id="clock">--:--:--</span>
+      <small id="date">Horário de Brasília</small>
+    </div>
+  </header>
+
+  <p class="lede" id="lede" role="status" aria-live="polite"></p>
+  <p class="note" id="closed" hidden></p>
+
+  <div class="ctl">
+    <div class="days" id="days" role="group" aria-label="Dia da semana"></div>
+    <div class="filters">
+      <label class="field"><span>Buscar</span>
+        <input type="search" id="q" placeholder="sala, código ou disciplina" autocomplete="off"></label>
+      <div class="field"><span>Mostrar</span>
+        <div class="opts" id="optStatus" role="group" aria-label="Filtrar por situação">
+          <button type="button" data-v="all" aria-pressed="true">Todas</button>
+          <button type="button" data-v="free" aria-pressed="false">Livres</button>
+          <button type="button" data-v="busy" aria-pressed="false">Ocupadas</button>
+        </div></div>
+      <label class="field"><span>Prédio</span>
+        <select id="bld">
+          <option value="all">Todos</option>
+          <option value="ICEx">ICEx</option>
+          <option value="CAD3">CAD3</option>
+          <option value="Outros">CAD1, CAD2 e Engenharia</option>
+        </select></label>
+      <label class="field"><span>Hora</span><input type="time" id="time"></label>
+      <button type="button" class="reset" id="reset" hidden>Voltar para agora</button>
+    </div>
+    <p class="legend" aria-hidden="true"><span><i></i>aula</span><span><i class="on"></i>aula em andamento</span><span><i class="ln"></i>hora consultada</span></p>
+  </div>
+
+  <main id="rooms"></main>
+
+  <details class="more">
+    <summary id="onlineSum">Turmas online</summary>
+    <div class="inner"><ul class="olist" id="onlineList"></ul></div>
+  </details>
+
+  <details class="more">
+    <summary>Plantas do ICEx</summary>
+    <div class="inner maps">
+      <figure><img alt="Planta do 1º andar do ICEx, salas 1001 a 1037" src="plantas/1.jpg"><figcaption>1º andar. Salas 1001 a 1037.</figcaption></figure>
+      <figure><img alt="Planta do 2º andar, lado direito do ICEx" src="plantas/2.jpg"><figcaption>2º andar, lado direito. Salas 2001 a 2039, 2076 e 2077.</figcaption></figure>
+      <figure><img alt="Planta do 2º andar, lado esquerdo (Física) do ICEx" src="plantas/3.jpg"><figcaption>2º andar, lado esquerdo (Física). Salas 2042 a 2075 e Auditórios 1, 2 e 3.</figcaption></figure>
+    </div>
+  </details>
+
+  <p class="foot">Grade do semestre __SEMESTRE__ (__NROWS__ horários). Não considera feriados, reposições nem trocas de sala. Uma sala livre pode estar fechada: confirme na portaria.</p>
+</div>
+
+<script>
+const DATA = __DATA__;
+const TZ = 'America/Sao_Paulo';
+const DN = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const DSHORT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const DAY_ORDER = [1,2,3,4,5,6,0];
+const WD = {Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+const GROUP_ORDER = ['ICEx · 1º andar','ICEx · 2º andar','ICEx · 2º andar (Física)','ICEx · 3º e 4º andares','ICEx · Anexo I (Química)','ICEx · Auditórios','CAD3 · 2º andar','CAD3 · 3º andar','CAD3 · 4º andar','CAD3 · Auditórios e laboratório','CAD1 e CAD2','Engenharia'];
+const T0 = 420, SPAN = 960; /* barra de 07:00 a 23:00 */
+const fmt = new Intl.DateTimeFormat('en-US', {timeZone: TZ, weekday:'short', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+const hhmm = m => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const ACC = {acustica:'acústica',administracao:'administração',agil:'ágil',algebra:'álgebra',analise:'análise',analitica:'analítica',aneis:'anéis',assintotica:'assintótica',astrofisica:'astrofísica',atuaria:'atuária',avancada:'avançada',avancados:'avançados',basica:'básica',basicas:'básicas',basicos:'básicos',bioestatistica:'bioestatística',biologicas:'biológicas',bioquimica:'bioquímica',calculo:'cálculo',caracterizacao:'caracterização',ciberseguranca:'cibersegurança',ciencia:'ciência',ciencias:'ciências',cinetica:'cinética',classica:'clássica',combinatoria:'combinatória',computacao:'computação',conclusao:'conclusão',criacao:'criação',didaticos:'didáticos',dinamicos:'dinâmicos',educacao:'educação',eletronica:'eletrônica',eletroquimica:'eletroquímica',equacoes:'equações',estatistica:'estatística',estatisticos:'estatísticos',estocasticos:'estocásticos',etica:'ética',evolucao:'evolução',fenomenos:'fenômenos',fisica:'física',fisico:'físico',fisicos:'físicos',fisicas:'físicas',forca:'força',fotoquimica:'fotoquímica',funcao:'função',galactica:'galáctica',geograficos:'geográficos',geometrico:'geométrico',gestao:'gestão',heuristicas:'heurísticas',metaheuristicas:'meta-heurísticas',historia:'história',inferencia:'inferência',informacao:'informação',informatica:'informática',iniciacao:'iniciação',inorganica:'inorgânica',instrumentacao:'instrumentação',inteligencia:'inteligência',interacao:'interação',introducao:'introdução',laboratorio:'laboratório',logica:'lógica',logicos:'lógicos',manutencao:'manutenção',maquina:'máquina',matematica:'matemática',materia:'matéria',mecanica:'mecânica',mecanoquimica:'mecanoquímica',mercadologica:'mercadológica',metodos:'métodos',microondas:'micro-ondas',modulos:'módulos',moleculas:'moléculas',movel:'móvel',nao:'não',nocoes:'noções',numerica:'numérica',numerico:'numérico',numero:'número',numeros:'números',optica:'óptica',otica:'ótica',ordinarias:'ordinárias',organica:'orgânica',organizacao:'organização',oscilacoes:'oscilações',otimizacao:'otimização',particulas:'partículas',parametrica:'paramétrica',pensoes:'pensões',populacao:'população',pratica:'prática',praticas:'práticas',previsao:'previsão',producao:'produção',programacao:'programação',quantica:'quântica',quimica:'química',quimicos:'químicos',reforco:'reforço',regressao:'regressão',resolucao:'resolução',robotica:'robótica',seguranca:'segurança',seminarios:'seminários',sintese:'síntese',topicos:'tópicos',termica:'térmica',tecnicas:'técnicas',teorica:'teórica',transferencia:'transferência',unitarias:'unitárias',usuarios:'usuários',variaveis:'variáveis',varias:'várias',distribuidos:'distribuídos',inclusao:'inclusão',operacoes:'operações',computação:'computação'};
+const UP = new Set(['i','ii','iii','iv','ci','cii','ciii','tcc','ia','smt','tma','tqb','tqc','tqj','tql','fi','ti']);
+const SMALL = new Set(['de','da','do','dos','das','e','em','para','a','o','ao','aos','na','no','por','as','of','and']);
+const titleCase = s => String(s).toLowerCase().split(/\s+/).map((w, i) => {
+  if (UP.has(w)) return w.toUpperCase();
+  if (i > 0 && SMALL.has(w)) return w;
+  const a = ACC[w] || w;
+  return a.charAt(0).toUpperCase() + a.slice(1);
+}).join(' ');
+
+function brNow() {
+  const p = {};
+  for (const x of fmt.formatToParts(new Date())) p[x.type] = x.value;
+  const h = (+p.hour) % 24;
+  return {dow: WD[p.weekday], h, m: +p.minute, s: +p.second, min: h * 60 + (+p.minute), date: p.day + '/' + p.month + '/' + p.year};
+}
+
+const state = {day: null, time: null, status: 'all', bld: 'all', q: '', open: new Set()};
+try {
+  const saved = JSON.parse(localStorage.getItem('salas-icex') || '{}');
+  if (['all','free','busy'].includes(saved.status)) state.status = saved.status;
+  if (['all','ICEx','CAD3','Outros'].includes(saved.bld)) state.bld = saved.bld;
+} catch (e) {}
+function save() { try { localStorage.setItem('salas-icex', JSON.stringify({status: state.status, bld: state.bld})); } catch (e) {} }
+
+const ORDER = GROUP_ORDER.concat([...new Set(DATA.rooms.map(r => r.g))].filter(g => !GROUP_ORDER.includes(g)));
+const rooms = DATA.rooms.slice().sort((a, b) => {
+  const ga = ORDER.indexOf(a.g), gb = ORDER.indexOf(b.g);
+  if (ga !== gb) return ga - gb;
+  return a.o.localeCompare(b.o, 'pt', {numeric: true});
+});
+const bldOf = g => g.startsWith('ICEx') ? 'ICEx' : g.startsWith('CAD3') ? 'CAD3' : 'Outros';
+const pct = m => (m - T0) / SPAN * 100;
+
+function eff() {
+  const n = brNow();
+  return {dow: state.day == null ? n.dow : state.day, min: state.time == null ? n.min : state.time, live: state.day == null && state.time == null, today: n.dow};
+}
+
+function statusOf(room, dow, min) {
+  const today = room.k.filter(c => c.d.includes(dow)).sort((a, b) => a.s - b.s);
+  const active = today.filter(c => c.s <= min && min < c.e);
+  if (active.length) return {busy: true, active, until: Math.max(...active.map(c => c.e)), today};
+  const next = today.find(c => c.s > min);
+  return {busy: false, soon: !!(next && next.s - min <= 20), next, today};
+}
+
+function rowHTML(room, st, t) {
+  const parts = room.n.split(' · ');
+  const main = parts[0], label = parts.slice(1).join(' · ');
+  const cls = st.busy ? 'busy' : st.soon ? 'soon' : 'free';
+  let l1, l2 = '';
+  if (st.busy) {
+    const a = st.active[0];
+    l1 = 'Ocupada até ' + hhmm(st.until);
+    l2 = titleCase(a.m) + ' · ' + a.t + (st.active.length > 1 ? ' (+' + (st.active.length - 1) + ')' : '');
+  } else if (st.next) {
+    l1 = 'Livre até ' + hhmm(st.next.s);
+    l2 = (st.soon ? 'Aula em ' + (st.next.s - t.min) + ' min: ' : 'Depois: ') + titleCase(st.next.m);
+  } else {
+    l1 = st.today.length ? 'Livre o resto do dia' : 'Livre o dia todo';
+  }
+  const blocks = st.today.map(c => {
+    const on = c.s <= t.min && t.min < c.e;
+    return '<i class="blk' + (on ? ' on' : '') + '" style="left:' + pct(c.s).toFixed(2) + '%;width:' + ((c.e - c.s) / SPAN * 100).toFixed(2) + '%"></i>';
+  }).join('');
+  const p = pct(t.min);
+  const nowl = p >= 0 && p <= 100 ? '<b class="nowl" style="left:' + p.toFixed(2) + '%"></b>' : '';
+  const isOpen = state.open.has(room.id);
+  const did = 'd-' + room.id.replace(/[^A-Za-z0-9]/g, '_');
+  const items = st.today.map(c => {
+    const on = c.s <= t.min && t.min < c.e;
+    return '<li class="' + (on ? 'now' : '') + '"><time>' + hhmm(c.s) + ' – ' + hhmm(c.e) + '</time><span>' + esc(titleCase(c.m)) + '<small>' + esc(c.c) + ' · turma ' + esc(c.t) + '</small></span></li>';
+  }).join('');
+  return '<li class="row ' + cls + '" data-id="' + esc(room.id) + '"><button type="button" class="rowbtn cols" aria-expanded="' + isOpen + '" aria-controls="' + did + '">' +
+    '<span class="rname">' + esc(main) + (label ? '<small>' + esc(label) + '</small>' : '') + '</span>' +
+    '<span class="bar" aria-hidden="true">' + blocks + nowl + '</span>' +
+    '<span class="rstat"><b>' + esc(l1) + '</b>' + (l2 ? '<em>' + esc(l2) + '</em>' : '') + '</span></button>' +
+    '<div class="rdetail" id="' + did + '"' + (isOpen ? '' : ' hidden') + '><div><h3>' + DN[t.dow] + '</h3>' +
+    (items ? '<ol>' + items + '</ol>' : '<p class="rstat"><em>Nenhuma aula nesta sala neste dia.</em></p>') + '</div></div></li>';
+}
+
+const AXIS = [8,10,12,14,16,18,20,22].map(h => '<span style="left:' + ((h - 7) / 16 * 100) + '%">' + pad(h) + '</span>').join('');
+
+function render() {
+  const t = eff();
+  const q = norm(state.q.trim());
+  const fid = document.activeElement && document.activeElement.closest ? (document.activeElement.closest('.row') || {}).dataset : null;
+  let free = 0;
+  const groups = new Map();
+  for (const r of rooms) {
+    const st = statusOf(r, t.dow, t.min);
+    if (!st.busy) free++;
+    if (state.bld !== 'all' && bldOf(r.g) !== state.bld) continue;
+    if (state.status === 'free' && st.busy) continue;
+    if (state.status === 'busy' && !st.busy) continue;
+    if (q && !norm(r.n + ' ' + r.k.map(c => c.m + ' ' + c.c + ' ' + c.t).join(' ')).includes(q)) continue;
+    if (!groups.has(r.g)) groups.set(r.g, []);
+    groups.get(r.g).push({r, st});
+  }
+  const when = t.live ? 'agora' : 'às ' + hhmm(t.min) + ' de ' + DN[t.dow].toLowerCase();
+  $('lede').innerHTML = '<b>' + free + '</b> de ' + rooms.length + ' salas livres ' + when + '.' +
+    '<span class="live' + (t.live ? '' : ' sim') + '">' + (t.live ? 'ao vivo' : 'consulta') + '</span>';
+
+  const closed = $('closed');
+  if (t.dow === 0 || t.min < 7 * 60 || t.min >= 22 * 60 + 40) {
+    closed.hidden = false;
+    closed.textContent = t.dow === 0 ? 'Não há aulas aos domingos na grade, então todas as salas aparecem livres. Os prédios costumam estar fechados.'
+      : 'Fora do horário de aulas (07:30 às 22:35). Todas as salas aparecem livres, mas os prédios podem estar fechados.';
+  } else closed.hidden = true;
+
+  let html = '';
+  for (const g of ORDER) {
+    const list = groups.get(g);
+    if (!list) continue;
+    const gf = list.filter(x => !x.st.busy).length;
+    html += '<section><div class="cols ghead"><h2>' + esc(g) + '</h2><div class="axis" aria-hidden="true">' + AXIS + '</div><span class="gcnt">' + gf + ' de ' + list.length + ' livres</span></div>' +
+      '<ul class="list">' + list.map(x => rowHTML(x.r, x.st, t)).join('') + '</ul></section>';
+  }
+  $('rooms').innerHTML = html || '<div class="empty">Nenhuma sala encontrada com esses filtros.</div>';
+  if (fid && fid.id) {
+    const el = $('rooms').querySelector('.row[data-id="' + CSS.escape(fid.id) + '"] .rowbtn');
+    if (el) el.focus({preventScroll: true});
+  }
+
+  const onl = DATA.online.filter(c => c.d.includes(t.dow) && c.s <= t.min && t.min < c.e);
+  $('onlineSum').textContent = 'Turmas online ' + (t.live ? 'agora' : 'neste horário') + ': ' + onl.length;
+  $('onlineList').innerHTML = onl.length
+    ? onl.map(c => '<li>' + esc(titleCase(c.m)) + ' · ' + esc(c.c) + ' ' + esc(c.t) + ' (' + hhmm(c.s) + ' – ' + hhmm(c.e) + ')</li>').join('')
+    : '<li>Nenhuma turma online neste horário.</li>';
+
+  $('days').innerHTML = DAY_ORDER.map(d => '<button type="button" data-d="' + d + '" aria-pressed="' + (d === t.dow) + '" class="' + (d === t.today ? 'today' : '') + '">' + DSHORT[d] + '</button>').join('');
+  $('reset').hidden = t.live;
+}
+
+let lastKey = '';
+function tick() {
+  const n = brNow();
+  $('clock').textContent = pad(n.h) + ':' + pad(n.m) + ':' + pad(n.s);
+  $('date').textContent = DN[n.dow] + ', ' + n.date + ' · Brasília (UTC−3)';
+  if (state.time == null && document.activeElement !== $('time')) $('time').value = hhmm(n.min);
+  const key = n.dow + ':' + n.min;
+  if (key !== lastKey) { lastKey = key; if (state.time == null || state.day == null) render(); }
+}
+
+$('rooms').addEventListener('click', e => {
+  const btn = e.target.closest('.rowbtn');
+  if (!btn) return;
+  const li = btn.closest('.row'), id = li.dataset.id, d = li.querySelector('.rdetail');
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  btn.setAttribute('aria-expanded', open);
+  d.hidden = !open;
+  open ? state.open.add(id) : state.open.delete(id);
+});
+$('days').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const d = +b.dataset.d;
+  state.day = d === brNow().dow ? null : d;
+  render();
+});
+$('optStatus').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.status = b.dataset.v;
+  $('optStatus').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  save(); render();
+});
+$('bld').addEventListener('change', e => { state.bld = e.target.value; save(); render(); });
+$('q').addEventListener('input', e => { state.q = e.target.value; render(); });
+$('time').addEventListener('input', e => {
+  const v = e.target.value;
+  if (!v) { state.time = null; } else { const [h, m] = v.split(':').map(Number); state.time = h * 60 + m; }
+  render();
+});
+$('reset').addEventListener('click', () => { state.day = null; state.time = null; $('time').value = hhmm(brNow().min); render(); });
+
+$('optStatus').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.v === state.status)));
+$('bld').value = state.bld;
+tick();
+render();
+setInterval(tick, 1000);
+</script>
