@@ -1,3 +1,9 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <title>Salas do ICEx</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,6 +22,7 @@
   --now: #E0481F;
   --free: #1B7A4B;
   --soon: #A87400;
+  color-scheme: light;
   --f-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --f-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
@@ -32,7 +39,11 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45; padding-inline: 16px; padding-block: 24px 56px; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45; padding-inline: 16px; padding-top: calc(24px + env(safe-area-inset-top, 0px)); padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
 .wrap { max-width: 1100px; margin-inline: auto; display: flex; flex-direction: column; gap: 22px; }
 button, input, select { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -156,6 +167,8 @@ details.more .inner { margin-top: 12px; }
 .olist { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 2px; }
 .foot { margin: 0; color: var(--ink2); font-size: 13px; max-width: 68ch; }
 </style>
+</head>
+<body>
 
 <div class="wrap">
   <header class="mast">
@@ -434,3 +447,5 @@ tick();
 render();
 setInterval(tick, 1000);
 </script>
+</body>
+</html>
